@@ -1,8 +1,39 @@
 #!/usr/bin/perl
 
+use threads;
 require "imagemagick.pl";
 
-print "
+$config_file = "sitevariables.pl"; #default config fie
+$sizes = "640";
+$count=0;
+$count_images=0;
+$count_thumbnails=0;
+$count_ignored_directories =0;
+$count_directories=0;
+$count_new_directories=0;
+$count_new_thumbnail_directories=0;
+$count_new_thumbnails=0;
+$verbosity = 0;
+
+foreach $arg (@ARGV){
+	print "processing $arg\n";
+	if($arg =~ /^-c$/){ # new config file
+		$config_file = $ARGV[$count+1];
+		unless($config_file){die("usage (option -c requires an argument): -c config_file\n");}
+		(-r "$config_file")||die("config file could not be opened for reading.  Attempted to use $config_file.\n");
+	} elsif($arg =~ /^-b$/){ # batchmode mode
+		$batchmode = "yes";	
+	} elsif($arg =~ /^-v$/){ # verbosity mode
+		$verbosity++;	
+	} elsif($arg =~ /^-s$/){ # specify sizes
+		$sizes = $ARGV[$count+1];
+		unless($sizes){print("WARNING: usage (option -s requires an argument): -c size,size,size\nWARNING: making only thumbnails\n");}
+	} elsif($arg =~ /^-t$/){ # force thumbnail regenerate
+		$forceThumbs = "yes";
+	} elsif($arg =~ /^-r$/){ # force RAW file regenerate
+		$forceRAW = "yes";
+	} else { # do help
+		print "
 ##########################################################
 # Thumbnail, Directory, and Data Accessory script for
 # My Photo Gallery
@@ -20,42 +51,22 @@ print "
 # separated by commas.
 #
 # -c config_file	specifies a config file (sitevariables.pl)
-# -q			for cronjobs ..doesnt ask questions
+# -b			for cronjobs ..doesnt ask questions
 # -s 320,640,800,1024   specify just a few sizes to make
 #                       default is just thumbnails,640
+# -t      force regeneration of thumbnails
+# -r      force regerenation of RAW image reduction
+# -v more debugging (supply more to increase level)
 #
 ##########################################################
 ";
+		exit;
 
-$config_file = "sitevariables.pl"; #default config fie
-$sizes = "640";
-$count=0;
-$count_images=0;
-$count_thumbnails=0;
-$count_ignored_directories =0;
-$count_directories=0;
-$count_new_directories=0;
-$count_new_thumbnail_directories=0;
-$count_new_thumbnails=0;
-
-foreach $arg (@ARGV){
-	print "processing $arg\n";
-	if($arg =~ /^-c$/){ # new config file
-		$config_file = $ARGV[$count+1];
-		unless($config_file){die("usage (option -c requires an argument): -c config_file\n");}
-		(-r "$config_file")||die("config file could not be opened for reading.  Attempted to use $config_file.\n");
-	}
-	if($arg =~ /^-q$/){ # new config file
-		$quite = "yes";	
-	}
-	if($arg =~ /^-s$/){ # new config file
-		$sizes = $ARGV[$count+1];
-		unless($sizes){print("WARNING: usage (option -s requires an argument): -c size,size,size\nWARNING: making only thumbnails\n");}
 	}
 	$count++;
 }
 
-print "using $config_file as the configuration file (sitevariables.pl)\n";
+unless($batchmode) { print "using $config_file as the configuration file (sitevariables.pl)\n"; }
 require "sitevariables.pl";
 
 unless($resize_quality){$resize_quality=95;}
@@ -67,7 +78,7 @@ if($watermark_file){
 	print("WARNING: watermarking images will attempt to modify the original images!");
 }
 
-unless($quite){
+unless($batchmode){
 	print "Is this the correct directory to read pictures from?\n$photoroot [y/n]\n";
 	$answer = <STDIN>;
 	unless($answer =~ /^y/i){
@@ -91,9 +102,16 @@ if($watermark_file){
 		close(WATERMARK_LOG);
 	}
 }
-print "\n\nreading from $photoroot\nwriting to $dataroot\n";
-print "making thumbnails and $sizes\n";
-process_directory($photoroot);
+unless($verbosity < 1) {
+	print "\n\nreading from $photoroot\nwriting to $dataroot\n";
+	print "making thumbnails and $sizes\n";
+}
+&process_directory($photoroot,1); # Set this to 1 to make it multi-threaded
+
+foreach my $thr (threads->list) {
+	# don't join main thread or ourselves
+	if($thr->tid && !threads::equal($thr,threads->self)) { $thr->join(); }
+}
 
 print"
 Summary
@@ -104,8 +122,9 @@ directories created: \t$count_new_directories for $count_directories total pictu
 thumbnails created:  \t$count_new_thumbnails/$count_images
 ";
 
-sub process_directory($){
+sub process_directory($$){
 	my $directory = $_[0];
+	my $doFork = $_[1];
 	my $file;
 	my $path;
 	my $filename;
@@ -113,11 +132,7 @@ sub process_directory($){
 
 	$glob_directory = $directory;
 	$glob_directory =~ s/ /\\ /g;
-	print "Processing $directory\n";
-
-	open(WATERMARK_LOG,">>watermark.log")||die("could not create watermark.log to
-		store information about which pictures have already been watermarked.");
-	flock(2,WATERMARK_LOG);
+	unless($verbosity < 1) { print "Processing $directory\n"; }
 
 	@files = glob("$glob_directory/*");
 	foreach $file (@files){
@@ -136,8 +151,40 @@ sub process_directory($){
 				$count_ignored_directories++;
 			}else{
 				print check_data_directories($file);
-				process_directory($file);
+				if($doFork) {
+					threads->new(\&process_directory,$file,0);
+				} else {
+					&process_directory($file,0);
+				}
 				$count_directories++;
+			}
+		}
+		if(($file =~ /\.MOV$/i) || ($file =~ /\.MP4$/i)) {
+			# Added by FAK
+			if(!-e $file.".gif") {
+#				system("ffmpeg -i \"$file\" -deinterlace -an -ss 3 -f mjpeg -t 1 -r 1 -y -s '320x240' -v 0 \"$file".".jpg\" >/dev/null 2>&1");
+				unless($verbosity < 1) { print "Creating gif of $file...\n"; }
+				$filename = (split(/\//,$file))[-1];
+				system("ffmpeg -i \"$file\" -r 1 /tmp/$filename\_%05d.gif >/dev/null 2>&1");
+				if($? == 0) {
+				 	system("convert -delay 1x5 -loop 0 /tmp/$filename\_*.gif \"$file\.gif\" && rm -f /tmp/$filename\_*");
+					if($? != 0) { print "Error creating $file.gif\n"; }
+					else { $file = $file.".gif"; }
+				} else { print "Failed to create $file.gif\n"; }
+			} else { $file = $file.".gif"; }
+		} elsif($file =~ /\.cr2$/i) {
+			# Added by FAK
+			my $fileJPG = $file;
+			my $fileCR2 = $file;
+			$fileJPG =~ s/\.CR2/.jpg/i;
+			if(defined($forceRAW) || (!-e $fileJPG)) {
+				system("ufraw-batch --wb=camera --black-point=auto --overwrite --color-smoothing --silent --rotate=camera --auto-crop --out-type=jpg \"$file\"");
+				$file = $fileJPG;
+			}
+			# delete files older than 2 months
+			my @stats = stat($fileCR2);
+			if(time() - $stats[9] > 60*60*24*30*2) {
+#				system("rm -f \"$fileCR2\"");
 			}
 		}
 		if(($file =~ /\.jpg$/i)||($file =~ /\.gif$/i)||($file =~ /\.png$/i)){
@@ -149,34 +196,31 @@ sub process_directory($){
 			$path=~ s/$photoroot\/(.*)\/.*/$1/i;
 
 			$count_images++;
-			print "\t$filename ";
+			unless($verbosity < 2) { print "\t$filename "; }
 
 			if($watermark_file){
+				open(WATERMARK_LOG,">>watermark.log")||die("could not create watermark.log to store information about which pictures have already been watermarked.");
+				flock(2,WATERMARK_LOG);
+
 				#watermark($file);
 				# see if we've watermarked this before
-				$already_watermarked = "no";
+				$already_watermarked = 0;
 				foreach $watermarked_picture (@watermarked_pictures){
-					if($watermarked_picture eq $file){
-						$already_watermarked = "yes";
-					}
+					if($watermarked_picture eq $file) { $already_watermarked = 1; }
 				}
-				unless($already_watermarked =~ /yes/i){
+				unless($already_watermarked == 1){
 					if(-w $file){
 						overlay($file,$file,$watermark_file);
-						print(" -watermarked- ");
+						unless($verbosity < 2) { print(" -watermarked- "); }
 						print WATERMARK_LOG "$file\n";
-					}else{
-						print "ERROR:  Could not watermark $file: $!\n";
-					}
+					} else{ print "ERROR:  Could not watermark $file: $!\n"; }
 				}
-			}else{
-				$already_watermarked = "yes"; # prevent forced creation of already existing sizes
-			}
+				flock(2,WATERMARK_LOG);
+				close(WATERMARK_LOG);
+			} else { $already_watermarked = 1; } # prevent forced creation of already existing sizes
 
 			#check for thumbnail
-			if((-e "$dataroot/$path/thumbnails/$filename") && ($already_watermarked =~ /yes/i)){
-				#print "[OK]\n";
-			}else{
+			if((defined($forceThumbs)) || !(-e "$dataroot/$path/thumbnails/$filename") || ($already_watermarked == 0)){
 				#print "[NOT FOUND]\n";
 				#print "processing $file=>$dataroot/$path/thumbnails/$filename\n";
 				unless(-e "$dataroot/site-images/mag.png"){
@@ -186,18 +230,16 @@ sub process_directory($){
 				if($mag_on_thumbnails =~ /yes/i){
 					print overlay("$dataroot/$path/thumbnails/$filename","$dataroot/$path/thumbnails/$filename","$dataroot/site-images/mag.png");
 				}
-				print " -thumbnailed- ";
+				unless($verbosity < 2) { print " -thumbnailed- "; }
 				$count_new_thumbnails++;
 			}
 			make_picture_size($file,"$dataroot/$path/320/$filename",320);
 			make_picture_size($file,"$dataroot/$path/640/$filename",640);
 			make_picture_size($file,"$dataroot/$path/800/$filename",800);
 			make_picture_size($file,"$dataroot/$path/1024/$filename",1024);
-			print "\n";
+			unless($verbosity < 2) { print "\n"; }
 		}
 	}
-	flock(2,WATERMARK_LOG);
-	close(WATERMARK_LOG);
 }
 
 sub make_picture_size($$$){
@@ -207,17 +249,16 @@ sub make_picture_size($$$){
 	
 	#check for size
 	if((-e "$new_file")){
-		if(!($already_watermarked =~ /yes/i)){
+		if($already_watermarked == 0){
 			print resize("$original_file","$new_file",$size,$resize_quality);
-			print " -$size- ";
+			unless($verbosity < 2) { print " -$size- "; }
 			$count_new_thumbnails++;
 		}
 	}elsif($sizes =~ /$size/){
 		print resize("$original_file","$new_file",$size,$resize_quality);
-		print " -$size- ";
+		unless($verbosity < 2) { print " -$size- "; }
 		$count_new_thumbnails++;
 	}
-
 }
 
 ################################################################
