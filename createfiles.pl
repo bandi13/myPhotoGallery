@@ -172,14 +172,14 @@ sub process_directory($$){
 				my $movRate = $movLength;
 				my @movTime = split(/:/,$movRate);
 				# Get a total of 50 frames over the course of the movie
-				$movRate = 50 / ($movTime[0]*3600 + $movTime[1]*60 + $movTime[2]);
+				$movRate = 50 / ($movTime[0]*3600 + $movTime[1]*60 + $movTime[2] + 1); # +1 for rounding up
 				unless($verbosity < 1 ) { print "Creating gif of $file, rate: $movRate, length $movLength, time $movTime[0]:$movTime[1]:$movTime[2]\n"; }
 				my $cmdOutput = `ffmpeg -i \"$file\" -r $movRate -t \"$movLength\" \"/tmp/$filename\_%05d.gif\" >/dev/null 2>&1`;
-				unless($verbosity < 2) { print "$cmdOutput\n"; }
+#				unless($verbosity < 2) { print "Creating gif ($filename)->ffmpeg:$cmdOutput\n"; }
 				if($? == 0) {
 					# if we have 50 frames, and we play 5 frames per second that is a 10 second clip
 				 	$cmdOutput = `convert -delay 1x5 -loop 0 \"/tmp/$filename\_*.gif\" \"$file\.gif\"`;
-					unless($verbosity < 2) { print "$cmdOutput\n"; }
+					unless($verbosity < 2) { print "Created gif ($filename)->Convert:$cmdOutput\n"; }
 					if($? != 0) { print "Error creating $file.gif\n"; }
 					else { $file = $file.".gif"; }
 				} else { print "Failed to create $file.gif\n"; }
