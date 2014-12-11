@@ -32,6 +32,8 @@ foreach $arg (@ARGV){
 		$forceThumbs = "yes";
 	} elsif($arg =~ /^-r$/){ # force RAW file regenerate
 		$forceRAW = "yes";
+	} elsif($arg =~ /^-m$/){ # force Movie file regenerate
+		$forceMOV = "yes";
 	} else { # do help
 		print "
 ##########################################################
@@ -56,6 +58,7 @@ foreach $arg (@ARGV){
 #                       default is just thumbnails,640
 # -t      force regeneration of thumbnails
 # -r      force regerenation of RAW image reduction
+# -m      force regerenation of Movie gif
 # -v more debugging (supply more to increase level)
 #
 ##########################################################
@@ -132,7 +135,7 @@ sub process_directory($$){
 
 	$glob_directory = $directory;
 	$glob_directory =~ s/ /\\ /g;
-	unless($verbosity < 1) { print "Processing $directory\n"; }
+	unless($verbosity < 2) { print "Processing $directory\n"; }
 
 	@files = glob("$glob_directory/*");
 	foreach $file (@files){
@@ -159,18 +162,28 @@ sub process_directory($$){
 				$count_directories++;
 			}
 		}
-		if(($file =~ /\.MOV$/i) || ($file =~ /\.MP4$/i)) {
+		if(($file =~ /\.MOV$/i) || ($file =~ /\.MP4$/i) || ($file =~ /\.AVI$/i) || ($file =~ /\.MPG/i)) {
 			# Added by FAK
-			if(!-e $file.".gif") {
+			if((!-e $file.".gif") || (defined($forceMOV))) {
 #				system("ffmpeg -i \"$file\" -deinterlace -an -ss 3 -f mjpeg -t 1 -r 1 -y -s '320x240' -v 0 \"$file".".jpg\" >/dev/null 2>&1");
-				unless($verbosity < 1) { print "Creating gif of $file...\n"; }
 				$filename = (split(/\//,$file))[-1];
-				system("ffmpeg -i \"$file\" -r 1 /tmp/$filename\_%05d.gif >/dev/null 2>&1");
+				my $movLength = `ffmpeg -i \"$file\" 2>&1 | grep \"Duration\" | cut -d ' ' -f 4 | sed s/,//`;
+				chomp($movLength);
+				my $movRate = $movLength;
+				my @movTime = split(/:/,$movRate);
+				# Get a total of 50 frames over the course of the movie
+				$movRate = 50 / ($movTime[0]*3600 + $movTime[1]*60 + $movTime[2]);
+				unless($verbosity < 1 ) { print "Creating gif of $file, rate: $movRate, length $movLength, time $movTime[0]:$movTime[1]:$movTime[2]\n"; }
+				my $cmdOutput = `ffmpeg -i \"$file\" -r $movRate -t \"$movLength\" \"/tmp/$filename\_%05d.gif\" >/dev/null 2>&1`;
+				unless($verbosity < 2) { print "$cmdOutput\n"; }
 				if($? == 0) {
-				 	system("convert -delay 1x5 -loop 0 /tmp/$filename\_*.gif \"$file\.gif\" && rm -f /tmp/$filename\_*");
+					# if we have 50 frames, and we play 5 frames per second that is a 10 second clip
+				 	$cmdOutput = `convert -delay 1x5 -loop 0 \"/tmp/$filename\_*.gif\" \"$file\.gif\"`;
+					unless($verbosity < 2) { print "$cmdOutput\n"; }
 					if($? != 0) { print "Error creating $file.gif\n"; }
 					else { $file = $file.".gif"; }
 				} else { print "Failed to create $file.gif\n"; }
+				foreach my $delfile (glob("/tmp/$filename\_*")) { unlink($delfile); }
 			} else { $file = $file.".gif"; }
 		} elsif($file =~ /\.cr2$/i) {
 			# Added by FAK
@@ -178,7 +191,9 @@ sub process_directory($$){
 			my $fileCR2 = $file;
 			$fileJPG =~ s/\.CR2/.jpg/i;
 			if(defined($forceRAW) || (!-e $fileJPG)) {
-				system("ufraw-batch --wb=camera --black-point=auto --overwrite --color-smoothing --silent --rotate=camera --auto-crop --out-type=jpg \"$file\"");
+				unless($verbosity < 1) { print "Creating jpg of $file...\n"; }
+				my $cmdOutput = `ufraw-batch --wb=camera --black-point=auto --overwrite --color-smoothing --silent --rotate=camera --auto-crop --out-type=jpg \"$file\"`;
+				unless($verbosity < 2) { print "$cmdOutput\n"; }
 				$file = $fileJPG;
 			}
 			# delete files older than 2 months
@@ -196,7 +211,7 @@ sub process_directory($$){
 			$path=~ s/$photoroot\/(.*)\/.*/$1/i;
 
 			$count_images++;
-			unless($verbosity < 2) { print "\t$filename "; }
+			unless($verbosity < 3) { print "\t$filename "; }
 
 			if($watermark_file){
 				open(WATERMARK_LOG,">>watermark.log")||die("could not create watermark.log to store information about which pictures have already been watermarked.");
@@ -211,7 +226,7 @@ sub process_directory($$){
 				unless($already_watermarked == 1){
 					if(-w $file){
 						overlay($file,$file,$watermark_file);
-						unless($verbosity < 2) { print(" -watermarked- "); }
+						unless($verbosity < 3) { print(" -watermarked- "); }
 						print WATERMARK_LOG "$file\n";
 					} else{ print "ERROR:  Could not watermark $file: $!\n"; }
 				}
@@ -230,14 +245,14 @@ sub process_directory($$){
 				if($mag_on_thumbnails =~ /yes/i){
 					print overlay("$dataroot/$path/thumbnails/$filename","$dataroot/$path/thumbnails/$filename","$dataroot/site-images/mag.png");
 				}
-				unless($verbosity < 2) { print " -thumbnailed- "; }
+				unless($verbosity < 3) { print " -thumbnailed- "; }
 				$count_new_thumbnails++;
 			}
 			make_picture_size($file,"$dataroot/$path/320/$filename",320);
 			make_picture_size($file,"$dataroot/$path/640/$filename",640);
 			make_picture_size($file,"$dataroot/$path/800/$filename",800);
 			make_picture_size($file,"$dataroot/$path/1024/$filename",1024);
-			unless($verbosity < 2) { print "\n"; }
+			unless($verbosity < 3) { print "\n"; }
 		}
 	}
 }
@@ -251,12 +266,12 @@ sub make_picture_size($$$){
 	if((-e "$new_file")){
 		if($already_watermarked == 0){
 			print resize("$original_file","$new_file",$size,$resize_quality);
-			unless($verbosity < 2) { print " -$size- "; }
+			unless($verbosity < 3) { print " -$size- "; }
 			$count_new_thumbnails++;
 		}
 	}elsif($sizes =~ /$size/){
 		print resize("$original_file","$new_file",$size,$resize_quality);
-		unless($verbosity < 2) { print " -$size- "; }
+		unless($verbosity < 3) { print " -$size- "; }
 		$count_new_thumbnails++;
 	}
 }
