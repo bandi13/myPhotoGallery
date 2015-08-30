@@ -162,7 +162,7 @@ sub process_directory($$){
 				$count_directories++;
 			}
 		}
-		if(($file =~ /\.MOV$/i) || ($file =~ /\.MP4$/i) || ($file =~ /\.AVI$/i) || ($file =~ /\.MPG/i)) {
+		if(($file =~ /\.MOV$/i) || ($file =~ /\.MP4$/i) || ($file =~ /\.AVI$/i) || ($file =~ /\.MPG$/i) || ($file =~ /\.WMV$/i)) {
 			# Added by FAK
 			if((!-e $file.".gif") || (defined($forceMOV))) {
 #				system("ffmpeg -i \"$file\" -deinterlace -an -ss 3 -f mjpeg -t 1 -r 1 -y -s '320x240' -v 0 \"$file".".jpg\" >/dev/null 2>&1");
@@ -198,9 +198,7 @@ sub process_directory($$){
 			}
 			# delete files older than 2 months
 			my @stats = stat($fileCR2);
-			if(time() - $stats[9] > 60*60*24*30*2) {
-#				system("rm -f \"$fileCR2\"");
-			}
+			if(time() - $stats[9] > 60*60*24*30*2) { system("rm -f \"$fileCR2\""); }
 		}
 		if(($file =~ /\.jpg$/i)||($file =~ /\.gif$/i)||($file =~ /\.png$/i)){
 			#get the image name

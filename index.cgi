@@ -340,13 +340,8 @@ sub generatealbum ($) {
         }
     }
     $return .= "</table>";
-
-    $return .= "<p><div align=\"center\">\n";
-    $return .= generatepagewidget(
-        "index.cgi?mode=view\&album=$selectedalbum", 
-        $total_pages,
-        $page
-    );
+		$return .= "<p><div align=\"center\">\n";
+    $return .= generatepagewidget( "index.cgi?mode=view\&album=$selectedalbum", $total_pages, $page);
     $return .="</div>\n";
     
     return $return;
@@ -656,7 +651,7 @@ sub exifentry($$) {
 sub generatepicture {
 	my $return;
 	
-	getPrevNextButtons($selectedalbum, $selectedpicture);
+	my ($prevLink, $nextLink) = getPrevNextButtons($selectedalbum, $selectedpicture);
 
 	#get width and height
 	my($imageToPing) = Image::Magick->new;
@@ -869,6 +864,18 @@ HTML
 </td></tr></table></td></tr></table>
 
 </td></tr>
+			<script language=\"javascript\" type=\"text/javascript\">
+//				document.onkeydown = checkKey;
+				window.onkeydown = checkKey;
+				function checkKey(e) {
+					if (e.keyCode == '37') { // left arrow
+						window.location = \"$prevLink\";
+					}
+				  else if (e.keyCode == '39') { // right arrow
+						window.location = \"$nextLink\";
+					}
+				}
+			</script>
 <tr>
 	<td ><center> 
 		<table width=100%><tr>
@@ -1132,6 +1139,9 @@ sub getPrevNextButtons {
 	$album =~ s/\\ /+/g; #make glob friendly spaces, cgi friendly
 	my @pictures;
 
+	my $nextLink;
+	my $prevLink;
+
 
 	# discard directories, record offset of current picture, 
     # total number of pictures, and page number of current image.
@@ -1179,6 +1189,7 @@ sub getPrevNextButtons {
         $prevPicture =~ s/ /+/g; # make a cgi link friendly one
         $prevPicture =~ s/&/%26/g;# thanks to Andrew I Baznikin for fixing '&' in pictures
             
+        $prevLink = "index.cgi?album=$album&mode=viewpicture&picture=$prevPicture#start_picture";
         $prev = "
 <a href=\"index.cgi?album=$album&mode=viewpicture&picture=$prevPicture#start_picture\">
 <img src=\"$dataurl/site-images/prev.gif\" border=0>&nbsp;<font size=-1>previous</font></a>";
@@ -1200,6 +1211,7 @@ sub getPrevNextButtons {
         $nextPicture =~ s/ /+/g;	
         $nextPicture =~ s/&/%26/g; # thanks to Andrew I Baznikin for fixing '&' in pictures
         
+        $nextLink = "index.cgi?album=$album&mode=viewpicture&picture=$nextPicture#start_picture";
         $next = "
 <a href=\"index.cgi?album=$album&mode=viewpicture&picture=$nextPicture#start_picture\">
 <font size=-1>next</font>&nbsp;<img src=\"$dataurl/site-images/next.gif\" border=0></A>";
@@ -1207,6 +1219,7 @@ sub getPrevNextButtons {
 <a href=\"index.cgi?album=$album&mode=viewpicture&picture=$nextPicture#start_picture\">
 <img src=\"$dataurl/$htmlalbum/thumbnails/$htmlnextPictureThumb\" border=0></a>";
     }
+		return ($prevLink, $nextLink);
 }
 
 ##############################################################################
@@ -1223,15 +1236,13 @@ sub createNewWidthPicture{
         #make directory for smaller pictures if it doesn't exist
         unless(-e "$dataroot/$selectedalbum/$maxWidth"){
                 #print "Making directory $photoroot/$selectedalbum/$maxWidth ...<br><br>";
-                mkdir("$dataroot/$selectedalbum/$maxWidth",0755) || dienice("Error, could not make directory for this size image
-                        please check the permissions!<br><br>");
+                mkdir("$dataroot/$selectedalbum/$maxWidth",0755) || dienice("Error, could not make directory for this size image. Please check the permissions!<br><br>");
         }
 
 
 	#create smaller size if it doesnt exist or the thumbnail is older than the picture
 	unless((-e "$dataroot/$selectedalbum/$maxWidth/$selectedpicture")){
-		resize("$photoroot/$selectedalbum/$selectedpicture",
-			"$dataroot/$selectedalbum/$maxWidth/$selectedpicture",$maxWidth,$resize_quality);
+		resize("$photoroot/$selectedalbum/$selectedpicture", "$dataroot/$selectedalbum/$maxWidth/$selectedpicture",$maxWidth,$resize_quality);
 	}
 
 	return $return;
