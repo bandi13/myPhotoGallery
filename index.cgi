@@ -27,7 +27,7 @@ if($exif=~ /yes/i){
 }
 srand();
 ############ BEGIN MAIN PROGRAM ################################
-$version = "4.03";
+$version = "5.00";
 
 $cur = CGI->new();
 $content = "";
@@ -55,9 +55,7 @@ if($cur->param("maxWidth")) {
 	if($cur->cookie('maxWidth')){$maxWidth=$cur->cookie('maxWidth');}
 }
 
-if($cur->param("mode")) {
-	$mode = $cur->param("mode");
-}
+if($cur->param("mode")) { $mode = $cur->param("mode"); }
 if($cur->param("album")) {
 	$selectedalbum = $cur->param("album");
 	$htmlalbum = $selectedalbum;
@@ -74,25 +72,15 @@ if($cur->param("album")) {
 				chomp;
 				next unless $_;
 				($username_file,$password_file) = split(/=/,$_);
-				if(($username_cookie eq $username_file)&&($password_cookie eq $password_file)){
-					$found = "yes";
-				}
-				if(($username_form eq $username_file)&&($password_form eq $password_file)){
-					$found = "yes";
-				}
+				if(($username_cookie eq $username_file)&&($password_cookie eq $password_file)){ $found = "yes"; }
+				if(($username_form eq $username_file)&&($password_form eq $password_file)){ $found = "yes"; }
 			}
 			close(LOCKFILE);
-			unless($found eq "yes"){
-				$mode = "askpassword";
-			}
-		}else{
-			$mode = "askpassword";
-		}
+			unless($found eq "yes"){ $mode = "askpassword"; }
+		}else{ $mode = "askpassword"; }
 	}
 }
-if($cur->param("page")) {
-   $page = $cur->param("page");
-}
+if($cur->param("page")) { $page = $cur->param("page"); }
 if($cur->param("picture")) {
 	$selectedpicture= $cur->param("picture");
 	$htmlpicture = $selectedpicture;
@@ -121,16 +109,12 @@ if($mode eq "view"){
 	$content .= generatealbum("$selectedalbum"); 
 }
 if($mode eq "viewpicture"){
-	if($cur->param("comment")){
-		getcomment();
-	}
+	if($cur->param("comment")){ getcomment(); }
 	$content .= generatepicture($selectedalbum,$selectedpicture); 
 }
-if($mode eq "askpassword"){
-	$content .= passwordform();
-}
+if($mode eq "askpassword"){ $content .= passwordform(); }
 
-printpage($content,"template.html");
+printpage($content);
 ############ BEGIN SUBROUTINES #################################
 
 ################################################################
@@ -150,9 +134,7 @@ sub check_data_directories($){
 		$step =~ s/\///gi;
 		if($sofar){
 			$sofar = "$sofar/$step"
-		}else{
-			$sofar = "$dataroot/$step";
-		}
+		}else{ $sofar = "$dataroot/$step"; }
 		unless(-e "$sofar"){
 			#$return .= "creating $sofar with 755 permissions<br>";
 			mkdir("$sofar",0755)||dienice("Could not create data directory! $!");
@@ -187,18 +169,12 @@ sub generatealbum ($) {
 	if(open (INFILE, "$dataroot/$selectedalbum/descriptions/album.txt")){ 
 		$description .= '';
 		flock (INFILE, 2); #locks the file for exclusive access.
-		while(<INFILE>){
-			$description .= "$_";
-		}
+		while(<INFILE>){ $description .= "$_"; }
 		flock (INFILE, 8); #unlocks the file
 		close(INFILE);
 	}
-	unless($description){
-		$description ="No album description.";
-	}
-	if($smiley =~ /yes/i){
-		$description = make_faces($description);
-	}
+	unless($description){ $description ="No album description."; }
+	if($smiley =~ /yes/i){ $description = make_faces($description); }
 	$description =~ s/\n/<br>/g;
 	$return .= "<center><table bgcolor=#000000 cellspacing=0 cellpadding=2 border=0>
 			<tr><td align=middle>
@@ -224,11 +200,7 @@ sub generatealbum ($) {
     my ($start, $end, $total_pages) = pageBounds(scalar(@files));
     @files = @files[$start..$end];
     $return .= "<p><div align=\"center\">\n";
-    $return .= generatepagewidget(
-        "index.cgi?mode=view\&album=$selectedalbum", 
-        $total_pages,
-        $page
-    );
+    $return .= generatepagewidget( "index.cgi?mode=view\&album=$selectedalbum", $total_pages, $page);
     $return .="</div>\n";
     
 
@@ -252,18 +224,15 @@ sub generatealbum ($) {
 	    $prettysubdirectory = makepretty($prettysubdirectory);
 
 	    $count++;
-		 if(-e "$dataroot/$selectedalbum/$file/descriptions/directory.gif"){
-		  	  $folder_picture = "$dataurl/$selectedalbum/$file/descriptions/directory.gif";
-		 }else{
-	    	if(-e "$photoroot/$selectedalbum/$file/lock"){
+			if(-e "$dataroot/$selectedalbum/$file/descriptions/directory.gif"){ $folder_picture = "$dataurl/$selectedalbum/$file/descriptions/directory.gif"; }
+			else {
+	    	if(-e "$photoroot/$selectedalbum/$file/lock") {
 		  	  $folder_picture = "$dataurl/site-images/$directory_selection";
 		  	  $folder_picture =~ s/(.*)\.(.*)/$1-locked.$2/;
-	    	}else{
-		  	  $folder_picture = "$dataurl/site-images/$directory_selection";
-	    	}
-		}
+	    	}else{ $folder_picture = "$dataurl/site-images/$directory_selection"; }
+			}
 	    $return .= "<td align=middle><a href=\"index.cgi?mode=view&album=$cgihtmlalbum/$cgihtmlsubdirectory\"><img src=\"$folder_picture\" border=0></a><br><a href=\"index.cgi?mode=view&album=$cgihtmlalbum/$cgihtmlsubdirectory\"><font size=-1>$prettysubdirectory</font></a></td>";
-            }
+			}
         }elsif($file =~ /\.(jpg|png|gif)\b/i){ #this is a supported image format (jpeg,png, or gif)
             fileinfo($file);
             $file =~ s/.*\/(.*)/$1/g;
@@ -274,17 +243,14 @@ sub generatealbum ($) {
             my $thumbnail = $file;
             #$thumbnail =~ s/(.*)\.(jpg|png|gif)\b/$1.jpg/i;
             unless(-e "$dataroot/$selectedalbum/thumbnails/$thumbnail"){
-		resize("$photoroot/$selectedalbum/$file","$dataroot/$selectedalbum/thumbnails/$thumbnail",$previewWidth,$resize_quality);
-		if($mag_on_thumbnails =~ /yes/i){
-			overlay("$dataroot/$selectedalbum/thumbnails/$thumbnail","$dataroot/$selectedalbum/thumbnails/$thumbnail","$dataroot/site-images/mag.png");
-		}
+							resize("$photoroot/$selectedalbum/$file","$dataroot/$selectedalbum/thumbnails/$thumbnail",$previewWidth,$resize_quality);
+							if($mag_on_thumbnails =~ /yes/i){ overlay("$dataroot/$selectedalbum/thumbnails/$thumbnail","$dataroot/$selectedalbum/thumbnails/$thumbnail","$dataroot/site-images/mag.png"); }
             }
             my $cgihtmlalbum = $selectedalbum;
             $cgihtmlalbum =~ s/ /+/g;
             my $cgihtmlpicture = $file;
             $cgihtmlpicture =~ s/ /+/g;
-				$cgihtmlpicture =~ s/&/%26/g;
-				
+						$cgihtmlpicture =~ s/&/%26/g;
 
             my $prettypicture = makepretty($file);
 
@@ -385,9 +351,7 @@ sub pageBounds {
     }
     
     my $end_file = $start_file + $thumbnails_per_page - 1;
-    if ($end_file > $last_file) {
-        $end_file = $last_file;
-    }
+    if ($end_file > $last_file) { $end_file = $last_file; }
     
     my $total_pages = int($total_files / $thumbnails_per_page);
     $total_pages++ if ($total_files % $thumbnails_per_page);    #take ceiling
@@ -420,11 +384,8 @@ sub generatepagewidget {
 
     $return .= "<td align=\"center\">";
     foreach $i (1..$total_pages) {
-        if ($i == $current_page) {
-            $return .= "$i";
-        } else {
-            $return .= "<a href=\"$baseurl\&page=$i\">$i</a>";
-        }
+        if ($i == $current_page) { $return .= "$i"; }
+				else { $return .= "<a href=\"$baseurl\&page=$i\">$i</a>"; }
         $return .="&nbsp;";
     }
     $return .= "</td>";
@@ -469,9 +430,7 @@ sub checkforbadthings {
 	    short, don't do this anymore.  Even just poking around could
 	    land you in serious trouble!</p>");
 	}
-	if($cur->param("q") =~ /\.\./){
-		hacking_attempt("Illegal!  You should be ashamed. ");
-	}
+	if($cur->param("q") =~ /\.\./){ hacking_attempt("Illegal!  You should be ashamed. "); }
 
 }
 
@@ -533,55 +492,37 @@ sub get_exifdata ($) {
 	}elsif (defined($info->{'ShutterSpeedValue'}[1]) &&
 	        ($info->{'ShutterSpeedValue'}[1] != 0)){
 		$value = 2**($info->{'ShutterSpeedValue'}[0] / $info->{'ShutterSpeedValue'}[1]);
-		if ($value < 1){
-			$value = 1 / $value;
-		}else{
-			$value = "1/" . sprintf("%.0f", $value);
-		}
+		if ($value < 1){ $value = 1 / $value; }
+		else{ $value = "1/" . sprintf("%.0f", $value); }
 	}
 	if ($value){
-		if ($value =~ /\..../){
-			$value = sprintf("%.2f", $value);
-		}
+		if ($value =~ /\..../){ $value = sprintf("%.2f", $value); }
 		$exifdata .= exifentry("Exposure", "$value sec.");
 	}
 
 	# aperture (f number)
 	$value = '';
-	if (defined($info->{'FNumber'}[1]) && ($info->{'FNumber'}[1] != 0)){
-		$value = $info->{'FNumber'}[0] / $info->{'FNumber'}[1];
-	}elsif (defined($info->{'ApertureValue'}[1]) &&
-	        ($info->{'ApertureValue'}[1] != 0)){
-		$value = sqrt(2)**($info->{'ApertureValue'}[0] / $info->{'ApertureValue'}[1]);
-	}
+	if (defined($info->{'FNumber'}[1]) && ($info->{'FNumber'}[1] != 0)){ $value = $info->{'FNumber'}[0] / $info->{'FNumber'}[1]; }
+	elsif (defined($info->{'ApertureValue'}[1]) && ($info->{'ApertureValue'}[1] != 0)){ $value = sqrt(2)**($info->{'ApertureValue'}[0] / $info->{'ApertureValue'}[1]); }
 	if ($value){
-		if ($value =~ /\.../){
-			$value = sprintf("%.1f", $value);
-		}
+		if ($value =~ /\.../){ $value = sprintf("%.1f", $value); }
 		$exifdata .= exifentry("Aperture", "f/$value");
 	}
 
 	#focal length
 	if (defined($info->{'FocalLength'}[1]) && ($info->{'FocalLength'}[1] != 0)) {
 		$value = $info->{'FocalLength'}[0] / $info->{'FocalLength'}[1];
-		if ($value =~ /\..../){
-			$value = sprintf("%.2f", $value);
-		}
+		if ($value =~ /\..../){ $value = sprintf("%.2f", $value); }
 		$exifdata .= exifentry("Focal&nbsp;length", $value . " mm");
 	}
 
 	# ISO speed
-	if (defined($info->{'ISOSpeedRatings'})){
-		$exifdata .= exifentry("ISO",$info->{'ISOSpeedRatings'});
-	}
+	if (defined($info->{'ISOSpeedRatings'})){ $exifdata .= exifentry("ISO",$info->{'ISOSpeedRatings'}); }
 
 	# focus distance
-	if (defined($info->{'SubjectDistance'}[1]) &&
-	    ($info->{'SubjectDistance'}[1] != 0)){
+	if (defined($info->{'SubjectDistance'}[1]) && ($info->{'SubjectDistance'}[1] != 0)){
 		$value = $info->{'SubjectDistance'}[0] / $info->{'SubjectDistance'}[1];
-		if ($value =~ /\...../){
-			$value = sprintf("%.3f", $value);
-		}
+		if ($value =~ /\...../){ $value = sprintf("%.3f", $value); }
 		$exifdata .= exifentry("Focus", $value . " m");
 	}
 
@@ -594,14 +535,12 @@ sub get_exifdata ($) {
 	}
 
 	# date and time
-	if (defined($info->{'DateTimeOriginal'}) &&
-	    ($info->{'DateTimeOriginal'} ne '0000:00:00 00:00:00')){
+	if (defined($info->{'DateTimeOriginal'}) && ($info->{'DateTimeOriginal'} ne '0000:00:00 00:00:00')){
 		my $cam_date = $info->{'DateTimeOriginal'};
 		my ($date,$time) = split(/ /,"$cam_date");
 		my ($year,$month,$day) = split(/:/,"$date");
 		my ($hours,$minutes,$seconds) = split(/:/,"$time");
-		my @months = ("","Jan","Feb","Mar","Apr","May","Jun",
-		                 "Jul","Aug","Sep","Oct","Nov","Dec");
+		my @months = ("","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec");
 		$month = $months[$month];
 		if($hours > 11 && $hours != 0){
 			$hours = $hours - 12;
@@ -610,14 +549,11 @@ sub get_exifdata ($) {
 			if($hours == 0){$hours = 12;}
 			$ampm = "AM";
 		}
-		$exifdata .= exifentry("Date&nbsp;taken",
-		               "$month $day, $year at $hours:$minutes:$seconds $ampm");
+		$exifdata .= exifentry("Date&nbsp;taken", "$month $day, $year at $hours:$minutes:$seconds $ampm");
 	}
 
 	# comment
-	if (defined($info->{'Comment'}) && ($info->{'Comment'} ne "")) {
-		$exifdata .= exifentry("Comment", $info->{'Comment'});
-	}
+	if (defined($info->{'Comment'}) && ($info->{'Comment'} ne "")) { $exifdata .= exifentry("Comment", $info->{'Comment'}); }
 	if (defined($info->{'UserComment'}) && ($info->{'UserComment'} ne "")) {
 		$usercomment = $info->{'UserComment'};
 		$usercomment =~ s/ASCII//g;
@@ -643,9 +579,7 @@ sub get_exifdata ($) {
 }
 
 # format an EXIF table entry
-sub exifentry($$) {
-	return "\n\t\t<tr><td valign=\"top\"><font size=-2><b>$_[0]:</b></font></td><td><font size=-2>$_[1]</font></td></tr>";
-}
+sub exifentry($$) { return "\n\t\t<tr><td valign=\"top\"><font size=-2><b>$_[0]:</b></font></td><td><font size=-2>$_[1]</font></td></tr>"; }
 
 
 sub generatepicture {
@@ -668,7 +602,7 @@ sub generatepicture {
 	my $shutterflytext;
 	if($allowshutterfly =~ /YES/i){
 		my $thumbnail = $htmlpicture;
-        $thumbnail =~ s/(.*)\.(jpg|png|gif)\b/$1.jpg/i;
+		$thumbnail =~ s/(.*)\.(jpg|png|gif)\b/$1.jpg/i;
 		$shutterflytext = "
 <form name=\"sflyc4p\" action=\"http://www.shutterfly.com/c4p/UpdateCart.jsp\" method=\"post\">
 <input type=submit value=\"order this photo\">
@@ -728,32 +662,16 @@ HTML
 		<input type=hidden name=picture value=\"$selectedpicture\">
 		<select name=maxWidth onchange=\"window.location=('index.cgi?mode=viewpicture&album=$selectedalbum&picture=$selectedpicture&maxWidth='+this.options[this.selectedIndex].value)\">";
 
-	if($maxWidth eq "320"){
-		if($saveWidth > 320){ $resizebutton .= "<option value=320 selected>very small (320)";}
-	} else {
-		if($saveWidth > 320){ $resizebutton .= "<option value=320>very small (320)";}
-	}
-	if($maxWidth eq "640"){
-		if($saveWidth > 640){ $resizebutton .= "<option value=640 selected>small (640)";}
-	} else {
-		if($saveWidth > 640){ $resizebutton .= "<option value=640>small (640)";}
-	}
-	if($maxWidth eq "800"){
-		if($saveWidth > 800){ $resizebutton .= "<option value=800 selected>medium (800)";}
-	} else {
-		if($saveWidth > 800){ $resizebutton .= "<option value=800>medium (800)";}
-	}
-	if($maxWidth eq "1024"){
-		if($saveWidth > 1024){ $resizebutton .= "<option value=1024 selected>large (1024)";}
-	} else {
-		if($saveWidth > 1024){ $resizebutton .= "<option value=1024>large (1024)";}
-	}
-	if($maxWidth eq "9999"){
-		$resizebutton .= "<option value=9999 selected>full size";
-	} else {
-		$resizebutton .= "<option value=9999>full size";
-	}
-
+	if($maxWidth eq "320"){ if($saveWidth > 320){ $resizebutton .= "<option value=320 selected>very small (320)";} }
+	else { if($saveWidth > 320){ $resizebutton .= "<option value=320>very small (320)";} }
+	if($maxWidth eq "640"){ if($saveWidth > 640){ $resizebutton .= "<option value=640 selected>small (640)";} }
+	else { if($saveWidth > 640){ $resizebutton .= "<option value=640>small (640)";} }
+	if($maxWidth eq "800"){ if($saveWidth > 800){ $resizebutton .= "<option value=800 selected>medium (800)";} }
+	else { if($saveWidth > 800){ $resizebutton .= "<option value=800>medium (800)";} }
+	if($maxWidth eq "1024"){ if($saveWidth > 1024){ $resizebutton .= "<option value=1024 selected>large (1024)";} }
+	else { if($saveWidth > 1024){ $resizebutton .= "<option value=1024>large (1024)";} }
+	if($maxWidth eq "9999"){ $resizebutton .= "<option value=9999 selected>full size"; }
+	else { $resizebutton .= "<option value=9999>full size"; }
 
 	$resizebutton .= "
 		</select>
@@ -762,12 +680,10 @@ HTML
 	my ($prettypicture) = $selectedpicture;
 	$prettypicture = makepretty($prettypicture);
 
-    $return .= print_location($selectedalbum, pageParams());
+	$return .= print_location($selectedalbum, pageParams());
 
 	my $table_width = $width;
-	if($table_width < 320){
-		$table_width = 320;
-	}
+	if($table_width < 320){ $table_width = 320; }
 	$return .= "
 <center>
 <br>
@@ -789,19 +705,12 @@ HTML
 		<td><font size=-2>$hits times</td></tr>";
 	
 	my $description = getdescription($selectedalbum,$selectedpicture);
-	if($smiley =~ /yes/i){
-		$description = make_faces($description);
-	}
+	if($smiley =~ /yes/i){ $description = make_faces($description); }
 	my $commentmsg ='';
-	if($allowcomments =~ /YES/i){
-	$commentmsg = "<font size=-2>Users may add comments <a href=#comments>below</a></font>";
-	}
+	if($allowcomments =~ /YES/i){ $commentmsg = "<font size=-2>Users may add comments <a href=#comments>below</a></font>"; }
 	$shadowwidth=$width -16; #lower left shadow is 16 pixels wide. Current table layout requires the bottom shadow to that much less.
-    if($exif=~ /yes/i){
-        $exifdata = get_exifdata("$picture");
-    }else{
-        $exifdata = "";
-    }
+    if($exif=~ /yes/i){ $exifdata = get_exifdata("$picture"); }
+		else{ $exifdata = ""; }
 #<tr bgcolor=$descriptioncolor><td>$description</td></tr>
 	$return .= "
 <tr><td align=center>";
@@ -819,11 +728,8 @@ HTML
 		<table bgcolor=\"#000000\" cellpadding=0 border=0 cellspacing=0 width=100%><tr><td align=center>";
 	}
 		
-	if(($width < $maxWidth) && ($height < $maxWidth)){
-		$return .= "<img src=\"$htmlroot/$htmlalbum/$htmlpicture\" width=$width height=$height border=0>";
-	}else{
-		$return .= "<img src=\"$dataurl/$htmlalbum/$htmlpicture\" width=$width height=$height border=0>";
-	}
+	if(($width < $maxWidth) && ($height < $maxWidth)){ $return .= "<img src=\"$htmlroot/$htmlalbum/$htmlpicture\" width=$width height=$height border=0>"; }
+	else{ $return .= "<img src=\"$dataurl/$htmlalbum/$htmlpicture\" width=$width height=$height border=0>"; }
 	
 	if($shadow =~ /yes/i){
 		$return .= "</td>
@@ -975,9 +881,7 @@ sub makepretty {
 	my $pretty = $_[0];
 
 	if($prettypicturenames =~ /YES/i) {
-		if($remove_leading_numbers =~ /yes/i){
-			$pretty =~ s/^[0-9]*//g;
-		}
+		if($remove_leading_numbers =~ /yes/i){ $pretty =~ s/^[0-9]*//g; }
 		$pretty =~ s/_/ /g;
 		$pretty =~ s/-/ /g;
 		$pretty =~ s/ /&nbsp;/g;
@@ -1002,9 +906,7 @@ sub getcomments {
 	}
 
 	#little trick to get comments on movies to work :-)
-	if(!($selectedpicture)){
-		$selectedpicture = $selectedmovie;
-	}
+	if(!($selectedpicture)){ $selectedpicture = $selectedmovie; }
 
 	#open datafile 
 	if(open (INFILE, "$dataroot/$selectedalbum/comments/$selectedpicture.txt")){ 
@@ -1031,16 +933,11 @@ sub getcomments {
 		$count++;
 		my ($time,$name,$email,$comment) = split(/=/,$comment,4);
 		#alternate row colors
-		if($commentcolor eq "$commentcolor1"){
-			$commentcolor = $commentcolor2;	
-		}else {
-			$commentcolor = $commentcolor1;
-		}
+		if($commentcolor eq "$commentcolor1"){ $commentcolor = $commentcolor2;	}
+		else { $commentcolor = $commentcolor1; }
 		my $email_comment;
 		if ($email){ $email_comment = "<a href=mailto:$email><img src=$dataurl/site-images/email.gif border=0></a>";}
-		if($smiley =~ /yes/i){
-			$comment = make_faces($comment);
-		}
+		if($smiley =~ /yes/i){ $comment = make_faces($comment); }
 		$return .="
 <tr bgcolor=$commentcolor><td><b><font size=-1>$name $says[int(rand(@says))] : </font></b></td><td align=right><font size=-1>&nbsp;$email_comment</font></td></tr>
 <tr bgcolor=$commentcolor><td colspan=2><font size=-1>$comment</font></td></tr>
@@ -1048,9 +945,7 @@ sub getcomments {
 ";
 
 	}
-	unless($count){
-		$return .= "<tr><td colspan=2>There are currently no comments for this item.</td></tr>";
-	}
+	unless($count){ $return .= "<tr><td colspan=2>There are currently no comments for this item.</td></tr>"; }
 	$mode = $cur->param("mode");
 	if($mode =~ /picture/i){
 		$return .= "
@@ -1098,9 +993,7 @@ sub getcomment {
 	$comment =~s /\n/<br>/g;
 
 	#little trick to get comments on movies to work :-)
-	if(!($selectedpicture)){
-		$selectedpicture = $selectedmovie;
-	}
+	if(!($selectedpicture)){ $selectedpicture = $selectedmovie; }
 
 	#append new comment to data file
 	if(open(OUTFILE,">>$dataroot/$selectedalbum/comments/$selectedpicture.txt")) {
@@ -1164,13 +1057,11 @@ sub getPrevNextButtons {
 
 		if($file =~ /\.(jpg|png|gif)\b/i) {
 			push(@pictures, $file);
-            $numberofpictures++;
+			$numberofpictures++;
 		}
 	}
 
-    if ($offset < 0) {
-        dienice("Not found: $picture"); # pic wasn't there.
-    }
+	if ($offset < 0) { dienice("Not found: $picture"); } # pic wasn't there.
 
 	$prev = '&nbsp;';
 	$next = '&nbsp;';
@@ -1301,8 +1192,7 @@ sub printsearchmatch {
         'HR','DIV .*','DIV','TT'
         );
 
-sub stripBadHtml
-{
+sub stripBadHtml {
         my ($str) = @_;
 
         $str =~ s/(\S{90})/$1 /g;
@@ -1312,23 +1202,19 @@ tags with approved ones
         return $str;
 }
 
-sub approvetag
-{
+sub approvetag {
         my ($tag,@apptag) = @_;
 
         $tag =~ s/^\s*?(.*)\s*?$/$1/e; #trim leading and trailing spaces
 
-        if (uc(substr ($tag, 0, 2)) eq 'A ')
-        {
+        if (uc(substr ($tag, 0, 2)) eq 'A ') {
                 $tag =~ s/^.*?href="?(.*?)"?$/A HREF="$1"/i; #enforce "s
                 return "<" . $tag . ">";
         }
 
-        foreach my $goodtag (@apptag)
-        {
+        foreach my $goodtag (@apptag) {
                 $tag = uc $tag;
-                if ($tag eq $goodtag || $tag eq '/' . $goodtag)
-                        {return "<" . $tag . ">";}
+                if ($tag eq $goodtag || $tag eq '/' . $goodtag) {return "<" . $tag . ">";}
                 #check against my list of tags
         }
         return "";

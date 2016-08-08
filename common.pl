@@ -2,16 +2,18 @@
 
 sub printpage($){
 	my $content = $_[0];
-	my $template = $_[1];
-	my $page;
-	open(TEMPLATE,"<$template")||dienice("could not find the template file template.html to use!");
-	while(<TEMPLATE>){
-		$page .= $_;
-	}
-	close(TEMPLATE);
-	$page =~ s/<!-- ?CONTENT ?-->/$content<br><font color='#000000' size=-1>
-Powered by <a color='#008800' href="http:\/\/www.fuzzymonkey.org\/newfuzzy\/software\/perl\/" target=\"new\">My Photo Gallery $version<\/a>.  Licensed under <a href=\"http:\/\/www.fsf.org\/copyleft\/gpl.html\" target=\"newwindow\">GPL<\/a>. &#169; 2000-2003 Fuzzymonkey.org.<\/font><br>/i;
-	print "Content-type: text/html\n\n$page";
+	print "Content-type:text/html\n\n";
+	print <<HTML;
+<html>
+	<head><title>My Photo Gallery</title></head>
+	<body style="font-family: Verdana;" bgcolor=$sitebgcolor>
+
+	$content
+
+	<br><font color='#000000' size=-1>Powered by <a color='#008800' href="https://github.com/bandi13/myPhotoGallery" target=\"new\">My Photo Gallery $version<\/a>.  Licensed under <a href=\"http:\/\/www.fsf.org\/copyleft\/gpl.html\" target=\"newwindow\">GPL<\/a>.<\/font>
+	</body>
+<html>
+HTML
 }
 sub dienice {
 	my($msg) = @_;

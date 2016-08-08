@@ -165,16 +165,16 @@ sub process_directory($$){
 		if(($file =~ /\.MOV$/i) || ($file =~ /\.MP4$/i) || ($file =~ /\.AVI$/i) || ($file =~ /\.MPG$/i) || ($file =~ /\.WMV$/i)) {
 			# Added by FAK
 			if((!-e $file.".gif") || (defined($forceMOV))) {
-#				system("ffmpeg -i \"$file\" -deinterlace -an -ss 3 -f mjpeg -t 1 -r 1 -y -s '320x240' -v 0 \"$file".".jpg\" >/dev/null 2>&1");
+#				system("avconv -i \"$file\" -deinterlace -an -ss 3 -f mjpeg -t 1 -r 1 -y -s '320x240' -v 0 \"$file".".jpg\" >/dev/null 2>&1");
 				$filename = (split(/\//,$file))[-1];
-				my $movLength = `ffmpeg -i \"$file\" 2>&1 | grep \"Duration\" | cut -d ' ' -f 4 | sed s/,//`;
+				my $movLength = `avconv -i \"$file\" 2>&1 | grep \"Duration\" | cut -d ' ' -f 4 | sed s/,//`;
 				chomp($movLength);
 				my $movRate = $movLength;
 				my @movTime = split(/:/,$movRate);
 				# Get a total of 50 frames over the course of the movie
 				$movRate = 50 / ($movTime[0]*3600 + $movTime[1]*60 + $movTime[2] + 1); # +1 for rounding up
 				unless($verbosity < 1 ) { print "Creating gif of $file, rate: $movRate, length $movLength, time $movTime[0]:$movTime[1]:$movTime[2]\n"; }
-				my $cmdOutput = `ffmpeg -i \"$file\" -r $movRate -t \"$movLength\" \"/tmp/$filename\_%05d.gif\" >/dev/null 2>&1`;
+				my $cmdOutput = `avconv -i \"$file\" -r $movRate -t \"$movLength\" \"/tmp/$filename\_%05d.gif\" >/dev/null 2>&1`;
 #				unless($verbosity < 2) { print "Creating gif ($filename)->ffmpeg:$cmdOutput\n"; }
 				if($? == 0) {
 					# if we have 50 frames, and we play 5 frames per second that is a 10 second clip

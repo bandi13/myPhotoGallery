@@ -18,24 +18,24 @@ $title = "My Gallery";
 # Each album should be stored as a subdirectory under this. 
 # please no trailing /
 #example - $photoroot ='/var/www/html/photo';
-$photoroot ='/home/user/www/photo';
+$photoroot ='/home/pictures/www';
 
 #URL that points to $photoroot.  This should be how the browser gets to it.
 #please no trailing /
 #example - $htmlroot = 'http://pancakes.darktech.org/photo';
-$htmlroot = 'http://yourdomain.com/photo';
+$htmlroot = '/~pictures/www';
 
 #Path to a directory were we can store the thumbnails, site-images/icons,
 #descriptions, etc.
-$dataroot ='/home/user/www/photodata';
+$dataroot ='/home/pictures/cgi/photodata';
 
 #URL that points to a directory for storing the thumbnails, site-images/icons,
 #descriptions, etc.  This should be a directory that your webserver can serve
 #images from (normally under www/ or html/)
-$dataurl = 'http://yourdomain.com/photodata';
+$dataurl = '/~pictures/photodata';
 
-$prettypicturenames = 'yes'; # eliminate spaces and drop off extensions?
-$remove_leading_numbers = 'yes'; # remove leading numbers from filenames?
+$prettypicturenames = 'no'; # eliminate spaces and drop off extensions?
+$remove_leading_numbers = 'no'; # remove leading numbers from filenames?
 $allowcomments = 'yes'; # allow comments on each pictures?
 $indicate_comments = 'yes'; # put a small icon next to thumbnails with comments?
 $smiley = 'yes'; # replace things like :-) with a smiley face?
@@ -51,8 +51,8 @@ $mag_on_thumbnails = 'yes'; # overlay thumbnails with "zoom" icon?
 # Set this to YES to have each comment emailed to you when it is placed.
 # In order for this to work properly, you must also specify an email
 # address and path to your sendmail
-$email_comments_to_admin = '';
-$admin_email = 'user@domain.com';
+$email_comments_to_admin = 'yes';
+$admin_email = 'andras@localhost';
 $sendmail = '/usr/lib/sendmail';
 
 # This is a list of all the discriptions used to as verbs for the comments
@@ -61,11 +61,6 @@ $sendmail = '/usr/lib/sendmail';
 
 #########################################################################
 # Colors, look, and feel
-#
-# NOTE: most of the look of your page is designated in template.html
-# please edit this file to change the look of your gallery.  It is a 
-# simple .html file with a special tag <!-- content --> in place of
-# what this script will generate.
 #########################################################################
 # row color is used as the background for the menu and the title bar for each
 # picture/item
@@ -75,6 +70,7 @@ $descriptioncolor = '#CCCCCC';
 # alternating colors for rows of comments
 $commentcolor1 = "#FFFFFF";
 $commentcolor2 = "#edf2f4";
+$sitebgcolor = "gray";
 $directory_selection = 'directory-simpleblue.gif';
 
 ###########################################################
@@ -83,13 +79,13 @@ $directory_selection = 'directory-simpleblue.gif';
 ###########################################################
 
 # Default number of images to be displayed per page. "" for no paging.
-$thumbnails_per_page = '16';
+$thumbnails_per_page = '64';
 
 # How many thumbnails do you want displayed per row?  Default is 4
 $thumbnails_per_row = 4;
 
 # Width (in pixels) for thumbnail images (default is 100)
-$previewWidth = '100';
+$previewWidth = '200';
 
 # Quality of resized pictures (60-100) 
 $resize_quality = '95';
